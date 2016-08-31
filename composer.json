@@ -24,7 +24,7 @@
   },
   "autoload": {
     "psr-4": {
-      "OpenAPI\\Consumer": "src"
+      "OpenAPI\\Consumer\\": "src"
     },
     "files": [
       "src/Support/helpers.php"
