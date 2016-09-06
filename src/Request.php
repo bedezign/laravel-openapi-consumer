@@ -1,6 +1,7 @@
 <?php namespace OpenAPI\Consumer;
 
 use GuzzleHttp\Client as GuzzleClient;
+use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Psr7\Request as Psr7Request;
 use GuzzleHttp\Psr7\Response as Psr7Response;
 
@@ -12,6 +13,9 @@ class Request
     protected $operation;
     /** @var GuzzleClient */
     protected $guzzle;
+    /** @var ClientException */
+    protected $exception;
+
 
     /** @var  string */
     protected $uri;
@@ -64,8 +68,16 @@ class Request
         //  - which happens here - will overwrite that one, resulting in the wrong target URI.
         $uri = rtrim($this->client->basePath ?: '', '/') . '/' . ltrim($this->uri, '/');
 
-        // Finally, execute the request
-        $this->response = $this->guzzle->$verb($uri, $options);
+        try {
+            // Finally, execute the request
+            $this->response = $this->guzzle->$verb($uri, $options);
+        }
+        catch(ClientException $e) {
+            if ($e->hasResponse()) {
+                $this->response = $e->getResponse();
+            }
+            $this->exception = $e;
+        }
 
         return $this;
     }
@@ -94,14 +106,25 @@ class Request
             case 'response' :
                 return $this->response;
 
+            case 'exception' :
+                return $this->exception;
+
             case 'statusCode' :
-                return $this->response->getStatusCode();
+                if ($this->response) {
+                    return $this->response->getStatusCode();
+                }
+
+                return $this->exception ? $this->exception->getCode() : null;
 
             case 'body' :
-                return $this->response->getBody();
+                if ($this->response) {
+                    return $this->response->getBody();
+                }
+
+                return $this->exception ? $this->exception->getMessage() : null;
 
             case 'json' :
-                if (head($this->operation->produces) === 'application/json') {
+                if ($this->response && head($this->operation->produces) === 'application/json') {
                     $responseBody = $this->response->getBody();
                     return json_decode($responseBody, true, 512, JSON_OBJECT_AS_ARRAY);
                 }
