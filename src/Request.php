@@ -2,6 +2,7 @@
 
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Exception\ClientException;
+use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Psr7\Request as Psr7Request;
 use GuzzleHttp\Psr7\Response as Psr7Response;
 
@@ -38,8 +39,8 @@ class Request
     /**
      * Add data to pass to the API. It is okay to call this multiple times, the data will be merged.
      *
-     * @param array $data           The data to register
-     * @param bool  $smartFill      If enabled, this will attempt to automatically created the correct data format based on the aliases and names. You can ignore the required structure of the data
+     * @param array $data      The data to register
+     * @param bool  $smartFill If enabled, this will attempt to automatically created the correct data format based on the aliases and names. You can ignore the required structure of the data
      * @return $this
      */
     public function with(array $data, $smartFill = false)
@@ -71,8 +72,7 @@ class Request
         try {
             // Finally, execute the request
             $this->response = $this->guzzle->$verb($uri, $options);
-        }
-        catch(ClientException $e) {
+        } catch (\GuzzleHttp\Exception\GuzzleException $e) {
             if ($e->hasResponse()) {
                 $this->response = $e->getResponse();
             }
@@ -83,11 +83,22 @@ class Request
     }
 
     /**
+     * Validates success of the request (no exception was thrown, a response is available and it has an acceptable status)
+     * @param int $acceptedStatus
+     * @return bool
+     */
+    public function succeeded($acceptedStatus = 200)
+    {
+        $acceptedStatus = is_array($acceptedStatus) ? $acceptedStatus : [$acceptedStatus];
+        return $this->exception === null && $this->response && in_array($this->response->getStatusCode(), $acceptedStatus);
+    }
+
+    /**
      * Manually set data to pass along to the API call.
      * Note: This does smart fill by default
      *
      * @param string $name
-     * @param mixed $value
+     * @param mixed  $value
      */
     public function __set($name, $value)
     {
@@ -248,8 +259,8 @@ class Request
 
     /**
      * @param DataType $item
-     * @param string $prefix
-     * @param array $aliases
+     * @param string   $prefix
+     * @param array    $aliases
      * @return array
      */
     protected function smartFillDataHelper($item, $prefix, $aliases)
