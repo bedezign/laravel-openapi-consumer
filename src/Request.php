@@ -2,7 +2,6 @@
 
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Exception\ClientException;
-use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Psr7\Request as Psr7Request;
 use GuzzleHttp\Psr7\Response as Psr7Response;
 
@@ -17,6 +16,8 @@ class Request
     /** @var ClientException */
     protected $exception;
 
+    /** @var \Callable */
+    protected $exceptionHandler;
 
     /** @var  string */
     protected $uri;
@@ -77,6 +78,11 @@ class Request
                 $this->response = $e->getResponse();
             }
             $this->exception = $e;
+
+            // If there is a handler for guzzle exceptions, call it
+            if ($this->exceptionHandler) {
+                app()->call($this->exceptionHandler, [$this, $e]);
+            }
         }
 
         return $this;
@@ -91,6 +97,17 @@ class Request
     {
         $acceptedStatus = is_array($acceptedStatus) ? $acceptedStatus : [$acceptedStatus];
         return $this->exception === null && $this->response && in_array($this->response->getStatusCode(), $acceptedStatus);
+    }
+
+    /**
+     * Normally Guzzle exceptions are silently consumed (and will result in a failed request).
+     * This function allows you to specify an exception handler that will be called for all guzzle exceptions
+     * function exceptionHandler(Request $request, ClientException $exception)
+     * @param Callable $handler
+     */
+    public function setGuzzleExceptionHandler($handler)
+    {
+        $this->exceptionHandler = $handler;
     }
 
     /**
@@ -140,6 +157,12 @@ class Request
                     return json_decode($responseBody, true, 512, JSON_OBJECT_AS_ARRAY);
                 }
                 return null;
+
+            case 'operation' :
+                return $this->operation;
+
+            case 'operationName' :
+                return $this->operation->operationId;
         }
 
         return null;
