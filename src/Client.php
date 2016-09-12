@@ -20,6 +20,7 @@ class Client
     /** @var GuzzleClient */
     protected $guzzleClient;
     protected $guzzleConfig;
+    protected $guzzleExceptionHandler;
 
     protected $aliases    = [];
     protected $operations = [];
@@ -59,7 +60,11 @@ class Client
             foreach ($operations as $verb => $operation) {
                 $operationId = array_get($operation, 'operationId', str_replace('/', '', $path) . $verb);
                 if ($operationId === $name) {
-                    return $this->operations[$operationId] = new Operation($this, $verb, $path, $operation);
+                    $this->operations[$operationId] = new Operation($this, $verb, $path, $operation);
+                    if ($this->guzzleExceptionHandler) {
+                        $this->operations[$operationId]->setGuzzleExceptionHandler($this->guzzleExceptionHandler);
+                    }
+                    return $this->operations[$operationId];
                 }
             }
         }
@@ -134,6 +139,18 @@ class Client
         }
 
         return $this->guzzleClient;
+    }
+
+    /**
+     * Normally Guzzle exceptions are silently consumed (and will result in a failed request).
+     * This function allows you to specify an exception handler that will be called for all guzzle exceptions
+     *      function exceptionHandler(Request $request, ClientException $exception)
+     * By setting the handler on client level, it will be passed to all created requests
+     * @param Callable $handler
+     */
+    public function setGuzzleExceptionHandler($handler)
+    {
+        $this->exceptionHandler = $handler;
     }
 
     protected function initialize()
