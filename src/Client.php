@@ -150,7 +150,7 @@ class Client
      */
     public function setGuzzleExceptionHandler($handler)
     {
-        $this->exceptionHandler = $handler;
+        $this->guzzleExceptionHandler = $handler;
     }
 
     protected function initialize()
