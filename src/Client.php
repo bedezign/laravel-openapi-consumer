@@ -61,9 +61,6 @@ class Client
                 $operationId = array_get($operation, 'operationId', str_replace('/', '', $path) . $verb);
                 if ($operationId === $name) {
                     $this->operations[$operationId] = new Operation($this, $verb, $path, $operation);
-                    if ($this->guzzleExceptionHandler) {
-                        $this->operations[$operationId]->setGuzzleExceptionHandler($this->guzzleExceptionHandler);
-                    }
                     return $this->operations[$operationId];
                 }
             }
@@ -151,6 +148,11 @@ class Client
     public function setGuzzleExceptionHandler($handler)
     {
         $this->guzzleExceptionHandler = $handler;
+    }
+
+    public function getGuzzleExceptionHandler()
+    {
+        return $this->guzzleExceptionHandler;
     }
 
     protected function initialize()

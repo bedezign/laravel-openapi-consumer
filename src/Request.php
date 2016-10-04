@@ -16,9 +16,6 @@ class Request
     /** @var ClientException */
     protected $exception;
 
-    /** @var \Callable */
-    protected $exceptionHandler;
-
     /** @var  string */
     protected $uri;
     /** @var  array Collected data to pass along with the request */
@@ -80,8 +77,8 @@ class Request
             $this->exception = $e;
 
             // If there is a handler for guzzle exceptions, call it
-            if ($this->exceptionHandler) {
-                app()->call($this->exceptionHandler, [$this, $e]);
+            if ($this->client->getGuzzleExceptionHandler()) {
+                app()->call($this->client->getGuzzleExceptionHandler(), [$this, $e]);
             }
         }
 
@@ -97,17 +94,6 @@ class Request
     {
         $acceptedStatus = is_array($acceptedStatus) ? $acceptedStatus : [$acceptedStatus];
         return $this->exception === null && $this->response && in_array($this->response->getStatusCode(), $acceptedStatus);
-    }
-
-    /**
-     * Normally Guzzle exceptions are silently consumed (and will result in a failed request).
-     * This function allows you to specify an exception handler that will be called for all guzzle exceptions
-     * function exceptionHandler(Request $request, ClientException $exception)
-     * @param Callable $handler
-     */
-    public function setGuzzleExceptionHandler($handler)
-    {
-        $this->exceptionHandler = $handler;
     }
 
     /**
